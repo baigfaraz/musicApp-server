@@ -1,17 +1,20 @@
 const AWS = require("aws-sdk");
 const asyncHandler = require("express-async-handler");
 const fs = require("fs");
+require("dotenv").config();
+const NodeCache = require("node-cache");
 
 // Add you own accessKeyId and secretAccessKey
-// AWS.config.update({
-//   accessKeyId: "YOUR_ACCESS_KEY",
-//   secretAccessKey: "YOUR_SECRET_KEY",
-//   region: "YOUR_REGION",
-// });
-
-
+AWS.config.update({
+  accessKeyId: process.env.ACCESSKEYID_S3,
+  secretAccessKey: process.env.SECRETACCESSKEY,
+  region: "us-east-1",
+});
 
 const s3 = new AWS.S3();
+
+// Initialize the cache with a specific TTL (time-to-live) value
+const cache = new NodeCache({ stdTTL: 3600 });
 
 // upload song in S3
 
@@ -59,43 +62,65 @@ const uploadSong = asyncHandler(async (req, res) => {
 //   }
 // });
 
-
-
 // download song from s3 to local storage
 
 const downloadSong = asyncHandler(async (req, res) => {
   const fileName = req.params.fileName;
-
+  const cachedFileKey = `cached_${fileName}`; // Unique cache key
+  // Check if the file is in cache
+  const cachedFile = cache.get(cachedFileKey);
+  if (cachedFile) {
+    // Serve the cached file
+    res.setHeader("Content-Disposition", `attachment; filename="${fileName}"`);
+    res.setHeader("Content-Type", "audio/mpeg");
+    res.send(cachedFile);
+    return;
+  }
   const params = {
-    Bucket: 'project-gramophone',
+    Bucket: "project-gramophone",
     Key: fileName,
   };
-
   try {
     const response = await s3.getObject(params).promise();
-
-    res.setHeader('Content-Disposition', `attachment; filename="${fileName}"`);
-    res.setHeader('Content-Type', 'audio/mpeg'); 
-
+    // Cache the downloaded file
+    cache.set(cachedFileKey, response.Body);
+    res.setHeader("Content-Disposition", `attachment; filename="${fileName}"`);
+    res.setHeader("Content-Type", "audio/mpeg");
     res.send(response.Body);
   } catch (err) {
-    res.status(500).json({ message: 'Download Error!' });
+    res.status(500).json({ message: "Download Error!" });
   }
 });
 
 // stream an audio whithout download
 
 const streamSong = asyncHandler(async (req, res) => {
+  const fileName = req.params.fileName;
+
+  const cachedStreamKey = `cached_${fileName}`; // Unique cache key
+  // Check if the file is in cache
+  const cachedStream = cache.get(cachedStreamKey);
+  if (cachedStream) {
+    // Serve the cached stream
+    res.setHeader("Content-Type", "audio/mpeg");
+    cachedStream.pipe(res);
+    return;
+  }
+
+  const params = { Bucket: "project-gramophone", Key: fileName };
+
   try {
-    const fileName = req.params.fileName;
-    const params = { Bucket: "project-gramophone", Key: fileName };
     const headObjectResponse = await s3.headObject(params).promise();
 
     res.setHeader("Content-Type", "audio/mpeg");
     res.setHeader("Content-Length", headObjectResponse.ContentLength);
 
-    s3.getObject(params)
-      .createReadStream()
+    const fileStream = s3.getObject(params).createReadStream();
+
+    // Cache the stream in chunks
+    cache.set(cachedStreamKey, fileStream.body);
+
+    fileStream
       .on("error", (error) => {
         console.error("Error streaming audio from S3:", error);
         res.status(500).send("Internal Server Error");

@@ -1,8 +1,9 @@
 const mongoose = require("mongoose");
+require('dotenv').config();
 const connectDB = async () => {
   try {
     mongoose.set("strictQuery", true);
-    const conn = await mongoose.connect('mongodb+srv://baigfaraz000:<password>@songsdata.utx7knx.mongodb.net/musicApp?retryWrites=true&w=majority', {
+    const conn = await mongoose.connect(process.env.MONGODB_URI, {
       useNewUrlParser: true,
       useUnifiedTopology: true,
     });
