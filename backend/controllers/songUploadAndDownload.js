@@ -3,11 +3,13 @@ const asyncHandler = require("express-async-handler");
 const fs = require("fs");
 
 // Add you own accessKeyId and secretAccessKey
-AWS.config.update({
-  accessKeyId: "YOUR_ACCESS_KEY",
-  secretAccessKey: "YOUR_SECRET_KEY",
-  region: "YOUR_REGION",
-});
+// AWS.config.update({
+//   accessKeyId: "YOUR_ACCESS_KEY",
+//   secretAccessKey: "YOUR_SECRET_KEY",
+//   region: "YOUR_REGION",
+// });
+
+
 
 const s3 = new AWS.S3();
 
@@ -36,24 +38,48 @@ const uploadSong = asyncHandler(async (req, res) => {
   }
 });
 
-// download song from S3
+// download song from S3 to server
+
+// const downloadSong = asyncHandler(async (req, res) => {
+//   const fileName = req.params.fileName;
+
+//   const params = {
+//     Bucket: "project-gramophone",
+//     Key: fileName,
+//   };
+
+//   try {
+//     const response = await s3.getObject(params).promise();
+
+//     fs.writeFileSync(`./download/${fileName}`, response.Body);
+
+//     res.status(200).json({ message: "File downloaded successfully" });
+//   } catch (err) {
+//     res.status(500).json({ message: "Download Error!" });
+//   }
+// });
+
+
+
+// download song from s3 to local storage
 
 const downloadSong = asyncHandler(async (req, res) => {
   const fileName = req.params.fileName;
 
   const params = {
-    Bucket: "project-gramophone",
+    Bucket: 'project-gramophone',
     Key: fileName,
   };
 
   try {
     const response = await s3.getObject(params).promise();
 
-    fs.writeFileSync(`./download/${fileName}`, response.Body);
+    res.setHeader('Content-Disposition', `attachment; filename="${fileName}"`);
+    res.setHeader('Content-Type', 'audio/mpeg'); 
 
-    res.status(200).json({ message: "File downloaded successfully" });
+    res.send(response.Body);
   } catch (err) {
-    res.status(500).json({ message: "Download Error!" });
+    res.status(500).json({ message: 'Download Error!' });
   }
 });
 
