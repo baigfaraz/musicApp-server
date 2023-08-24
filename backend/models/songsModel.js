@@ -29,12 +29,9 @@ const songSchema = mongoose.Schema({
         type : String,
         required : true
     },
-    song_lyrics : {
-        type : Array,
-        required : true
-    },
+    
 },{
-    timeStamps : true,
+    timestamps : true,
 })
 
 module.exports = mongoose.model('Song' , songSchema)

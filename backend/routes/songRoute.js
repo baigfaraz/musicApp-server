@@ -3,7 +3,7 @@ const router = express.Router();
 const {getSongs , setSongs } = require('../controllers/songController');
 
 
-router.get('/' , getSongs);
+router.get('/:id' , getSongs);
 router.post('/' , setSongs);
 
 module.exports = router;

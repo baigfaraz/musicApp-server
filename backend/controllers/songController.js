@@ -5,12 +5,19 @@ const Song = require("../models/songsModel");
 // @routes GET /api/songs
 //@access private
 const getSongs = asyncHandler(async (req, res) => {
-  const songs = await Song.find();
-  res.status(200).json(songs);
+  const songId = req.params.id;
+  const song = await Song.findById(songId);
+
+  if (!song) {
+    res.status(404).json({ message: "Song not found" });
+    return;
+  }
+
+  res.status(200).json(song);
 });
 
 // @desc set songs
-// @routes POST /api/songs
+// @routes POST /api/songs/:id
 //@access private
 const setSongs = asyncHandler(async (req, res) => {
   if (!req.body.song_title) {
@@ -25,7 +32,6 @@ const setSongs = asyncHandler(async (req, res) => {
     song_duration: req.body.song_duration,
     song_year: req.body.song_year,
     song_file: req.body.song_file,
-    song_lyrics: req.body.song_lyrics,
   });
   res.status(201).json(songs);
 });
